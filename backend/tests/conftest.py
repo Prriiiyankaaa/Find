@@ -81,6 +81,7 @@ def client(db):
         finally:
             session.close()
 
+    original_lifespan = app.router.lifespan_context
     app.dependency_overrides[get_db] = _override_db
     app.router.lifespan_context = _noop_lifespan
 
@@ -88,20 +89,22 @@ def client(db):
     fake_queue = MagicMock()
     fake_queue.enqueue.return_value = fake_job
 
-    with (
-        patch("find_api.routers.upload.upload_file", return_value="images/ab/abc.jpg"),
-        patch("find_api.routers.upload.get_task_queue", return_value=fake_queue),
-        patch(
-            "find_api.routers.gallery.get_file_url",
-            return_value="http://fake/img.jpg",
-        ),
-        patch("find_api.routers.gallery.delete_file"),
-        patch(
-            "find_api.routers.search.get_file_url",
-            return_value="http://fake/img.jpg",
-        ),
-    ):
-        with TestClient(app) as c:
-            yield c
-
-    app.dependency_overrides.clear()
+    try:
+        with (
+            patch("find_api.routers.upload.upload_file", return_value="images/ab/abc.jpg"),
+            patch("find_api.routers.upload.get_task_queue", return_value=fake_queue),
+            patch(
+                "find_api.routers.gallery.get_file_url",
+                return_value="http://fake/img.jpg",
+            ),
+            patch("find_api.routers.gallery.delete_file"),
+            patch(
+                "find_api.routers.search.get_file_url",
+                return_value="http://fake/img.jpg",
+            ),
+        ):
+            with TestClient(app) as c:
+                yield c
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.router.lifespan_context = original_lifespan

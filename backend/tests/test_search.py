@@ -65,9 +65,18 @@ class TestSearchResponseShape:
 
         meta = result["metadata"]
         expected = {
-            "id", "filename", "minio_key", "status", "liked",
-            "width", "height", "cluster_id", "created_at",
-            "caption", "objects", "url",
+            "id",
+            "filename",
+            "minio_key",
+            "status",
+            "liked",
+            "width",
+            "height",
+            "cluster_id",
+            "created_at",
+            "caption",
+            "objects",
+            "url",
         }
         assert expected.issubset(meta.keys())
 

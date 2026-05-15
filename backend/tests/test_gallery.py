@@ -48,9 +48,18 @@ class TestGalleryResponseShape:
         item = response.json()["items"][0]
 
         expected_keys = {
-            "id", "filename", "status", "created_at", "processed_at",
-            "width", "height", "file_size", "cluster_id", "minio_key",
-            "liked", "url",
+            "id",
+            "filename",
+            "status",
+            "created_at",
+            "processed_at",
+            "width",
+            "height",
+            "file_size",
+            "cluster_id",
+            "minio_key",
+            "liked",
+            "url",
         }
         assert expected_keys.issubset(item.keys())
 
