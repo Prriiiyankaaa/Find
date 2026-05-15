@@ -269,6 +269,9 @@ export const triggerClustering = async (): Promise<ClusteringJobResponse> => {
 export function extractErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
+    if (typeof data?.detail === "string" && data.detail.trim()) {
+      return data.detail.trim();
+    }
     if (typeof data?.message === "string" && data.message.trim()) {
       return data.message.trim();
     }
