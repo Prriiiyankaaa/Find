@@ -32,6 +32,7 @@ import {
   toggleLike,
 } from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/media";
+import { useRouter, usePathname } from "next/navigation";
 
 function GalleryPageContent() {
   const [page, setPage] = useState(1);
@@ -51,6 +52,8 @@ function GalleryPageContent() {
   const limit = 24;
 
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const galleryQueryKey = useMemo(
     () => ["gallery", page, filter, likedOnly] as const,
@@ -246,9 +249,18 @@ function GalleryPageContent() {
   );
 
   const closeDetail = useCallback(() => {
-    setSelectedMediaId(null);
-    setQuerySelectedItem(null);
-  }, []);
+  setSelectedMediaId(null);
+  setQuerySelectedItem(null);
+
+  const params = new URLSearchParams(searchParams.toString());
+
+  params.delete("media");
+
+  const queryString = params.toString();
+  const url = queryString ? `${pathname}?${queryString}` : pathname;
+
+  router.replace(url, { scroll: false });
+}, [router, pathname, searchParams]);
 
   const filters = [
     { label: "All", value: "all" as const },
