@@ -23,13 +23,13 @@ Relates to issue #42 and discussion #37.
 ### Development (hot reload via Next.js dev server)
 
 ```bash
-# Terminal 1 – start the Next.js dev server
+# Terminal 1 - start the Next.js dev server
 cd frontend
 pnpm install      # first time only
 pnpm approve-builds   # if prompted about sharp, approve it, then re-run pnpm install
 pnpm dev          # runs on http://localhost:3000
 
-# Terminal 2 – start Tauri (points devUrl at localhost:3000)
+# Terminal 2 - start Tauri (points devUrl at localhost:3000)
 cd frontend
 pnpm install      # installs @tauri-apps/cli
 pnpm desktop:dev  # opens the desktop window
@@ -138,7 +138,7 @@ If Tauri is ruled out, Electron is the natural fallback:
 
 | | Tauri | Electron |
 |---|---|---|
-| Installer size | ~5–15 MB | ~80–120 MB |
+| Installer size | ~5-15 MB | ~80-120 MB |
 | Image optimisation | Blocked (static export) | Works (ships Node.js, can run Next.js server) |
 | Backend sidecar | Possible but complex | Easier with child_process |
 | Code signing | Supported | Supported |

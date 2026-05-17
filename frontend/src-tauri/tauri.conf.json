@@ -9,7 +9,7 @@
   "app": {
     "windows": [
       {
-        "title": "Find – Local AI Image Intelligence",
+        "title": "Find - Local AI Image Intelligence",
         "width": 1280,
         "height": 800,
         "resizable": true,
