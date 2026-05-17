@@ -184,6 +184,17 @@ uv run pytest tests/ -v
 
 `.env.example` reflects the current stack. Keep `EMBEDDING_DIM` aligned with the selected CLIP/SigLIP model and pgvector dimensions.
 
+### Worker and clustering variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `WORKER_TIMEOUT` | `300` | Seconds before RQ kills a stalled job. Raise this when processing large batches or running real ML inference; the default is sufficient for mock mode. |
+| `MIN_CLUSTER_SIZE` | `3` | Minimum number of images HDBSCAN needs to form a cluster. Lower values produce more, smaller clusters; higher values produce fewer, broader ones. Tune after indexing a representative sample. |
+| `MIN_SAMPLES` | `1` | Controls how conservative HDBSCAN is about noise. Higher values cause more images to be labelled unclustered (`-1`). Keep at `1` for small libraries. |
+| `CLUSTERING_BACKEND` | `hdbscan` | Clustering algorithm to use. `hdbscan` is the default and works well for variable-density image sets. Switch only if you are experimenting with an alternative backend. |
+
+These only affect the worker and the `/api/cluster/run` path. Frontend and API behaviour is unchanged by them.
+
 ## Troubleshooting
 
 ### Slow first run
