@@ -7,7 +7,6 @@ import {
   Pencil,
   Play,
   RefreshCw,
-  Shield,
   Users,
   X,
 } from "lucide-react";
@@ -226,13 +225,6 @@ export default function PeoplePage() {
               Photos grouped by person, detected and clustered entirely on your
               device.
             </p>
-            <div className="mt-4 flex items-center gap-2 rounded-2xl border border-[var(--frost)] bg-[color:var(--surface-soft)] px-4 py-3">
-              <Shield className="h-4 w-4 shrink-0 text-[color:var(--blue)]" />
-              <p className="text-xs text-[color:var(--silver)]">
-                All face data is processed and stored locally on your device. No
-                images or face data are ever sent to any external service.
-              </p>
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
