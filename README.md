@@ -239,6 +239,8 @@ These only affect the worker and the `/api/cluster/run` path. Frontend and API b
 
 ## Troubleshooting
 
+- [Common Setup Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+
 ### Images stuck in processing
 
 When an image is marked as `processing`, the upload has been accepted and queued for background analysis by the worker. The worker reads the file from MinIO, extracts metadata, generates embeddings, updates the database row, and then queues clustering.
