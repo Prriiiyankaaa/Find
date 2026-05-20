@@ -361,3 +361,59 @@ export const triggerFaceClustering = async () => {
   const response = await api.post("/api/people/cluster");
   return response.data;
 };
+
+// ─── User Feedback API ──────────────────────────────────────────────────────
+
+export interface FeedbackItem {
+  id: number;
+  feedback_type: "same_person" | "image_assignment";
+  source_id: number;
+  target_id: number | null;
+  media_id: number | null;
+  decision: "confirm" | "reject";
+  metadata_json: Record<string, unknown> | null;
+  created_at: string;
+  is_active: boolean;
+}
+
+export const createFeedback = async (data: {
+  feedback_type: string;
+  source_id: number;
+  target_id?: number | null;
+  media_id?: number | null;
+  decision: string;
+  metadata_json?: Record<string, unknown> | null;
+}): Promise<FeedbackItem> => {
+  const response = await api.post<FeedbackItem>("/api/feedback", data);
+  return response.data;
+};
+
+export const listFeedback = async (
+  params: {
+    feedback_type?: string;
+    source_id?: number;
+    media_id?: number;
+    is_active?: boolean;
+  } = {},
+): Promise<FeedbackItem[]> => {
+  const response = await api.get<FeedbackItem[]>("/api/feedback", { params });
+  return response.data;
+};
+
+export const revertFeedback = async (
+  feedbackId: number,
+): Promise<FeedbackItem> => {
+  const response = await api.post<FeedbackItem>(
+    `/api/feedback/${feedbackId}/revert`,
+  );
+  return response.data;
+};
+
+export const deleteFeedback = async (
+  feedbackId: number,
+): Promise<{ status: string; id: number }> => {
+  const response = await api.delete<{ status: string; id: number }>(
+    `/api/feedback/${feedbackId}`,
+  );
+  return response.data;
+};
