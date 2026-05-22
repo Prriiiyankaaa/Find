@@ -2,6 +2,7 @@
 
 import hashlib
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 from find_api.models.media import Media
 
@@ -18,6 +19,11 @@ def _seed(db, *, filename, status, liked=False, metadata_json=None):
         liked=liked,
         width=800,
         height=600,
+        thumbnail_key=f"thumbnails/test/{filename}.webp",
+        thumbnail_content_type="image/webp",
+        thumbnail_size=512,
+        thumbnail_width=256,
+        thumbnail_height=192,
         metadata_json=metadata_json,
         created_at=datetime.now(timezone.utc),
     )
@@ -58,10 +64,49 @@ class TestGalleryResponseShape:
             "file_size",
             "cluster_id",
             "minio_key",
+            "thumbnail_key",
+            "thumbnail_content_type",
+            "thumbnail_size",
+            "thumbnail_width",
+            "thumbnail_height",
+            "thumbnail_url",
             "liked",
             "url",
         }
         assert expected_keys.issubset(item.keys())
+
+    def test_thumbnail_redirect_prefers_thumbnail_key(self, client, db):
+        media = _seed(db, filename="sunset.jpg", status="indexed")
+
+        with patch(
+            "find_api.routers.gallery.get_file_url",
+            side_effect=lambda key: f"http://fake/{key}",
+        ):
+            response = client.get(
+                f"/api/image/{media.id}/thumbnail", follow_redirects=False
+            )
+
+        assert response.status_code == 307
+        assert (
+            response.headers["location"]
+            == "http://fake/thumbnails/test/sunset.jpg.webp"
+        )
+
+    def test_thumbnail_redirect_falls_back_to_original(self, client, db):
+        media = _seed(db, filename="legacy.jpg", status="indexed")
+        media.thumbnail_key = None
+        db.commit()
+
+        with patch(
+            "find_api.routers.gallery.get_file_url",
+            side_effect=lambda key: f"http://fake/{key}",
+        ):
+            response = client.get(
+                f"/api/image/{media.id}/thumbnail", follow_redirects=False
+            )
+
+        assert response.status_code == 307
+        assert response.headers["location"] == "http://fake/images/test/legacy.jpg"
 
     def test_indexed_item_includes_metadata(self, client, db):
         _seed(

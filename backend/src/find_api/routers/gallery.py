@@ -81,22 +81,34 @@ def get_gallery(
             "filename": media.filename,
             "status": media.status,
             "created_at": media.created_at.isoformat() if media.created_at else None,
-            "processed_at": media.processed_at.isoformat()
-            if media.processed_at
-            else None,
+            "processed_at": (
+                media.processed_at.isoformat() if media.processed_at else None
+            ),
             "width": media.width,
             "height": media.height,
             "file_size": media.file_size,
             "cluster_id": media.cluster_id,
             "minio_key": media.minio_key,
+            "thumbnail_key": media.thumbnail_key,
+            "thumbnail_content_type": media.thumbnail_content_type,
+            "thumbnail_size": media.thumbnail_size,
+            "thumbnail_width": media.thumbnail_width,
+            "thumbnail_height": media.thumbnail_height,
             "liked": media.liked,
         }
 
-        # Add thumbnail URL
+        # Add original and thumbnail URLs separately.
         try:
             item["url"] = get_file_url(media.minio_key)
         except Exception:
             item["url"] = None
+        if media.thumbnail_key:
+            try:
+                item["thumbnail_url"] = get_file_url(media.thumbnail_key)
+            except Exception:
+                item["thumbnail_url"] = None
+        else:
+            item["thumbnail_url"] = item["url"]
 
         # Add metadata if indexed
         metadata = normalize_metadata(media.metadata_json)
@@ -149,6 +161,11 @@ def get_image_detail(media_id: int, db: Session = Depends(get_db)):
         "created_at": media.created_at.isoformat() if media.created_at else None,
         "processed_at": media.processed_at.isoformat() if media.processed_at else None,
         "cluster_id": media.cluster_id,
+        "thumbnail_key": media.thumbnail_key,
+        "thumbnail_content_type": media.thumbnail_content_type,
+        "thumbnail_size": media.thumbnail_size,
+        "thumbnail_width": media.thumbnail_width,
+        "thumbnail_height": media.thumbnail_height,
         "metadata": metadata,
         "caption": metadata.get("caption", ""),
         "objects": metadata.get("objects", []),
@@ -163,6 +180,13 @@ def get_image_detail(media_id: int, db: Session = Depends(get_db)):
         response["url"] = get_file_url(media.minio_key)
     except Exception:
         response["url"] = None
+    if media.thumbnail_key:
+        try:
+            response["thumbnail_url"] = get_file_url(media.thumbnail_key)
+        except Exception:
+            response["thumbnail_url"] = None
+    else:
+        response["thumbnail_url"] = response["url"]
 
     return response
 
@@ -177,8 +201,10 @@ def get_image_thumbnail(media_id: int, db: Session = Depends(get_db)):
     if not media:
         raise HTTPException(404, "Image not found")
 
+    object_key = media.thumbnail_key or media.minio_key
+
     try:
-        url = get_file_url(media.minio_key)
+        url = get_file_url(object_key)
     except Exception:
         raise HTTPException(500, "Could not generate image URL")
 
@@ -206,6 +232,7 @@ def reprocess_image(media_id: int, db: Session = Depends(get_db)):
     Allowed for:
     - Images with status ``failed``
     - Images with status ``indexed`` that have incomplete metadata (no caption)
+    - Images with status ``indexed`` that are missing a thumbnail
     """
     media = db.query(Media).filter(Media.id == media_id).first()
     if not media:
@@ -213,12 +240,17 @@ def reprocess_image(media_id: int, db: Session = Depends(get_db)):
 
     metadata = normalize_metadata(media.metadata_json)
     is_indexed_incomplete = media.status == "indexed" and not metadata.get("caption")
+    is_missing_thumbnail = media.status == "indexed" and not media.thumbnail_key
 
-    if media.status != "failed" and not is_indexed_incomplete:
+    if (
+        media.status != "failed"
+        and not is_indexed_incomplete
+        and not is_missing_thumbnail
+    ):
         raise HTTPException(
             400,
             "Reprocess is only available for failed images or indexed images "
-            "with incomplete metadata.",
+            "with incomplete metadata or missing thumbnails.",
         )
 
     media.status = "pending"
@@ -252,6 +284,17 @@ def delete_image(media_id: int, db: Session = Depends(get_db)):
         delete_file(media.minio_key)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(500, f"Failed to delete file from storage: {exc}") from exc
+
+    if media.thumbnail_key:
+        try:
+            delete_file(media.thumbnail_key)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Deleted original for media %s but failed to delete thumbnail %s: %s",
+                media.id,
+                media.thumbnail_key,
+                exc,
+            )
 
     db.delete(media)
     db.flush()

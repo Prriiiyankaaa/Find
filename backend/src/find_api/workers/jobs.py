@@ -11,7 +11,7 @@ from rq import get_current_job
 
 from find_api.core.database import SessionLocal
 from find_api.core.queue import clear_clustering_job_state, enqueue_clustering_job
-from find_api.core.storage import get_file
+from find_api.core.storage import get_file, upload_thumbnail
 from find_api.models.media import Media
 from find_api.utils.exif import extract_exif_data
 
@@ -75,6 +75,13 @@ def analyze_image(media_id: int):
             image = image.convert("RGB")
 
         media.width, media.height = image.size
+
+        if not media.thumbnail_key:
+            set_stage(job, "generating thumbnail")
+            thumbnail_metadata = upload_thumbnail(image_data, media.file_hash)
+            if thumbnail_metadata:
+                for key, value in thumbnail_metadata.items():
+                    setattr(media, key, value)
 
         set_stage(job, "extracting EXIF")
 
