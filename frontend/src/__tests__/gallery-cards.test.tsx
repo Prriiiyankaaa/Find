@@ -65,7 +65,12 @@ describe("Gallery card states (light mode)", () => {
   });
 
   it("displays empty state when no items are returned", async () => {
-    vi.mocked(api.getGallery).mockResolvedValue({ items: [], total: 0, page: 1, limit: 24 });
+    vi.mocked(api.getGallery).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 24,
+    });
     renderWithClient(<GalleryPage />);
     await waitFor(() => {
       expect(screen.getByText(/No images found/i)).toBeInTheDocument();
@@ -75,7 +80,7 @@ describe("Gallery card states (light mode)", () => {
     });
   });
 
-  const mockItems = [
+  const mockItems: api.MediaItem[] = [
     {
       id: 1,
       filename: "image1.jpg",
@@ -84,7 +89,7 @@ describe("Gallery card states (light mode)", () => {
       status: "indexed",
       liked: false,
       caption: "A caption",
-      created_at: "2026-05-24T00:00:00Z"
+      created_at: "2026-05-24T00:00:00Z",
     },
     {
       id: 2,
@@ -93,42 +98,49 @@ describe("Gallery card states (light mode)", () => {
       minio_key: "key2",
       status: "failed",
       liked: false,
-      caption: null,
-      created_at: "2026-05-24T00:00:00Z"
+      caption: undefined,
+      created_at: "2026-05-24T00:00:00Z",
     },
     {
       id: 3,
       filename: "image3.jpg",
-      url: null,
-      minio_key: null,
+      url: undefined,
+      minio_key: "key3",
       status: "indexed",
       liked: true,
       caption: "Liked image",
-      created_at: "2026-05-24T00:00:00Z"
+      created_at: "2026-05-24T00:00:00Z",
     },
   ];
 
   it("renders cards with correct UI for normal, liked and failed states", async () => {
-    vi.mocked(api.getGallery).mockResolvedValue({ items: mockItems as any, total: 3, page: 1, limit: 24 });
+    vi.mocked(api.getGallery).mockResolvedValue({
+      items: mockItems,
+      total: 3,
+      page: 1,
+      limit: 24,
+    });
     renderWithClient(<GalleryPage />);
     // Wait for cards to appear
     await waitFor(() => {
       expect(screen.getAllByRole("button", { name: /View/i })).toHaveLength(3);
     });
+    const indexedLabels = screen.getAllByLabelText("Status: Indexed");
+    expect(indexedLabels).toHaveLength(2);
+
     // Normal card (id 1) should show image and no filled heart
     const card1Img = screen.getByAltText("image1.jpg");
     expect(card1Img).toBeInTheDocument();
-    expect(card1Img.closest("article")).toContainElement(
-      screen.getAllByLabelText("Status: Indexed")[0]!,
-    );
+    expect(card1Img.closest("article")).toContainElement(indexedLabels[0]);
     const heartBtn1 = screen.getAllByLabelText("Like image")[0];
     expect(heartBtn1).toBeInTheDocument();
+
     // Liked card (id 3) should have filled heart
-    const heartBtn3 = screen.getAllByLabelText("Unlike image")[0]!;
+    const unlikeBtns = screen.getAllByLabelText("Unlike image");
+    expect(unlikeBtns).toHaveLength(1);
+    const heartBtn3 = unlikeBtns[0];
     expect(heartBtn3).toBeInTheDocument();
-    expect(heartBtn3.closest("article")).toContainElement(
-      screen.getAllByLabelText("Status: Indexed")[1]!,
-    );
+    expect(heartBtn3.closest("article")).toContainElement(indexedLabels[1]);
     // Failed card (id 2) should show retry button
     const card2Img = screen.getByAltText("image2.jpg");
     expect(card2Img.closest("article")).toContainElement(
