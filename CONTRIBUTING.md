@@ -4,7 +4,7 @@ Thanks for contributing to Find.
 
 This project is part of **GSSoC'26**, and we want contributions to be beginner-friendly, reviewable, and production-safe.
 
-For repo-aware coding-agent and contributor guidance, start with [AGENT.md](./AGENT.md).
+For repo-aware coding-agent and contributor guidance, start with [AGENTS.md](./AGENTS.md).
 
 ## Before you start
 
