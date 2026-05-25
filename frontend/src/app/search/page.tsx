@@ -330,7 +330,7 @@ export default function SearchPage() {
 
                     <div className="px-3 pb-3">
                       <FeedbackRating
-                        label="Search match"
+                        label=""
                         onRate={(rating) =>
                           submitSearchRating(result.media_id, rating)
                         }
