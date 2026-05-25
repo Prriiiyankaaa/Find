@@ -11,10 +11,9 @@ Run with:
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 from PIL import Image as PILImage
 
 DIM = 8  # small vector size — enough to test the math
@@ -271,8 +270,10 @@ class TestBiasRemoval:
         have cosine similarity close to 0, not elevated by a shared bias.
         """
         # Two image vectors that are exactly orthogonal → true similarity = 0
-        img_a = np.zeros(DIM, dtype=np.float32); img_a[0] = 1.0
-        img_b = np.zeros(DIM, dtype=np.float32); img_b[1] = 1.0
+        img_a = np.zeros(DIM, dtype=np.float32)
+        img_a[0] = 1.0
+        img_b = np.zeros(DIM, dtype=np.float32)
+        img_b[1] = 1.0
 
         result_a, _ = _run(img_a, caption="", objects=[], text_map={})
         result_b, _ = _run(img_b, caption="", objects=[], text_map={})

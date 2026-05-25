@@ -16,6 +16,8 @@ from __future__ import annotations
 import os
 import sys
 import traceback
+import numpy as np
+from PIL import Image
 
 # Put the backend src on the path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,9 +26,6 @@ sys.path.insert(0, BACKEND_SRC)
 
 # Use mock ML mode so no real models are downloaded
 os.environ.setdefault("ML_MODE", "mock")
-
-import numpy as np
-from PIL import Image
 
 # ---------------------------------------------------------------------------
 # Colour helpers
