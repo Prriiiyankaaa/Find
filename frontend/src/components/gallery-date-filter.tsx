@@ -10,7 +10,11 @@ interface GalleryDateFilterProps {
   dateStart: string | null;
   dateEnd: string | null;
   onSortOrderChange: (order: SortOrder) => void;
-  onDateFilterChange: (preset: DateRangePreset | null, start: string | null, end: string | null) => void;
+  onDateFilterChange: (
+    preset: DateRangePreset | null,
+    start: string | null,
+    end: string | null,
+  ) => void;
 }
 
 export function GalleryDateFilter({
@@ -97,7 +101,9 @@ export function GalleryDateFilter({
           <span>
             {sortOrder === "newest" ? "Newest first" : "Oldest first"}
           </span>
-          <ChevronDown className={`h-3.5 w-3.5 transition ${showSortMenu ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition ${showSortMenu ? "rotate-180" : ""}`}
+          />
         </button>
 
         {/* Sort dropdown menu */}
@@ -145,7 +151,9 @@ export function GalleryDateFilter({
         >
           <Calendar className="h-3.5 w-3.5" />
           <span>{getDateRangeLabel()}</span>
-          <ChevronDown className={`h-3.5 w-3.5 transition ${showDatePicker ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition ${showDatePicker ? "rotate-180" : ""}`}
+          />
         </button>
 
         {/* Date dropdown menu */}

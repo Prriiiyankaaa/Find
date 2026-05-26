@@ -156,12 +156,16 @@ vi.mock("@/components/gallery-date-filter", () => ({
     sortOrder,
     dateRange,
     onSortOrderChange,
-    onDateRangeChange,
+    onDateFilterChange,
   }: {
     sortOrder: string;
     dateRange: string | null;
     onSortOrderChange: (order: string) => void;
-    onDateRangeChange: (preset: string | null) => void;
+    onDateFilterChange: (
+      preset: string | null,
+      start: string | null,
+      end: string | null,
+    ) => void;
   }) => (
     <div data-testid="gallery-date-filter">
       <button
@@ -177,7 +181,11 @@ vi.mock("@/components/gallery-date-filter", () => ({
         type="button"
         data-testid={`date-range-${dateRange || "all"}`}
         onClick={() => {
-          onDateRangeChange(dateRange === "last_30_days" ? null : "last_30_days");
+          onDateFilterChange(
+            dateRange === "last_30_days" ? null : "last_30_days",
+            null,
+            null,
+          );
         }}
       >
         {dateRange || "All dates"}

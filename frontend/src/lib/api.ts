@@ -19,7 +19,11 @@ export type AnalysisStageName =
   | "ocr"
   | "embedding";
 export type SortOrder = "newest" | "oldest";
-export type DateRangePreset = "last_30_days" | "last_60_days" | "last_90_days" | "custom";
+export type DateRangePreset =
+  | "last_30_days"
+  | "last_60_days"
+  | "last_90_days"
+  | "custom";
 
 export type AnalysisStageStatus = {
   status: "pending" | "success" | "failed";

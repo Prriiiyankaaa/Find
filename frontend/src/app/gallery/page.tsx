@@ -31,15 +31,15 @@ import {
 } from "@/components/image-preview-modal";
 import { StatusIndicator } from "@/components/status-indicator";
 import {
-  type DateRangePreset,
-  type GalleryResponse,
-  type SortOrder,
   api,
+  type DateRangePreset,
   deleteImage,
   deleteImagesBulk,
+  type GalleryResponse,
   getGallery,
   getImageDetail,
   reprocessImage,
+  type SortOrder,
   toggleLike,
 } from "@/lib/api";
 import {
@@ -172,7 +172,9 @@ const getSortOrderFromParam = (sortOrder: string | null): SortOrder => {
  * @param dateRange - The raw string parameter from the URL.
  * @returns The resolved DateRangePreset type or undefined if not set.
  */
-const getDateRangeFromParam = (dateRange: string | null): DateRangePreset | undefined => {
+const getDateRangeFromParam = (
+  dateRange: string | null,
+): DateRangePreset | undefined => {
   if (
     dateRange === "last_30_days" ||
     dateRange === "last_60_days" ||
@@ -201,7 +203,9 @@ const getSortOrderParam = (sortOrder: SortOrder): string | null => {
  * @param dateRange - The active DateRangePreset type, undefined, or null.
  * @returns The string value to use in the URL, or null if not set.
  */
-const getDateRangeParam = (dateRange: DateRangePreset | undefined | null): string | null => {
+const getDateRangeParam = (
+  dateRange: DateRangePreset | undefined | null,
+): string | null => {
   return dateRange || null;
 };
 
@@ -250,7 +254,15 @@ function GalleryPageContent() {
 
   // The query key includes filter + likedOnly + sort/date params so any URL filter change
   // automatically resets the infinite query back to page 1.
-  const galleryQueryKey = ["gallery-infinite", filter, likedOnly, sortOrder, dateRange, dateStart, dateEnd] as const;
+  const galleryQueryKey = [
+    "gallery-infinite",
+    filter,
+    likedOnly,
+    sortOrder,
+    dateRange,
+    dateStart,
+    dateEnd,
+  ] as const;
 
   const {
     data,
