@@ -35,7 +35,9 @@ export interface MediaItem {
   height?: number | null;
   file_size?: number | null;
   cluster_id?: number | null;
+  cluster_label?: string | null;
   url?: string | null;
+  thumbnail_url?: string | null;
   caption?: string;
   objects?: Array<{
     class: string;
@@ -95,10 +97,21 @@ export interface GalleryResponse {
   limit: number;
 }
 
+export interface BulkDeleteResponse {
+  message: string;
+  deleted_ids: number[];
+  missing_ids: number[];
+  failed_ids: number[];
+  deleted_count: number;
+  missing_count: number;
+  failed_count: number;
+}
+
 export interface ClusterSample {
   id: number;
   filename: string;
   url?: string | null;
+  thumbnail_url?: string | null;
 }
 
 export interface ClusterInfo {
@@ -128,9 +141,12 @@ export interface ClusterDetail {
     id: number;
     filename: string;
     url?: string | null;
+    thumbnail_url?: string | null;
     caption?: string;
   }>;
 }
+
+export type ClusterUpdateResponse = Omit<ClusterInfo, "samples">;
 
 export interface ClusteringJobResponse {
   message: string;
@@ -149,6 +165,10 @@ export interface SearchResponse {
   results: SearchResult[];
   total: number;
   query: string;
+  page: number;
+  limit: number;
+  skip: number;
+  has_more: boolean;
 }
 
 export interface JobStatus {
@@ -263,12 +283,29 @@ export const deleteImage = async (
   return response.data;
 };
 
+export const deleteImagesBulk = async (
+  mediaIds: number[],
+): Promise<BulkDeleteResponse> => {
+  const response = await api.post<BulkDeleteResponse>(
+    "/api/images/bulk-delete",
+    {
+      media_ids: mediaIds,
+    },
+  );
+  return response.data;
+};
+
 export const searchImages = async (params: {
   query: string;
   limit?: number;
+  skip?: number;
 }): Promise<SearchResponse> => {
   const response = await api.get<SearchResponse>("/api/search", {
-    params: { q: params.query, limit: params.limit || 20 },
+    params: {
+      q: params.query,
+      limit: params.limit || 24,
+      skip: params.skip || 0,
+    },
   });
   return response.data;
 };
@@ -297,6 +334,17 @@ export const getClusterDetail = async (
   clusterId: number,
 ): Promise<ClusterDetail> => {
   const response = await api.get<ClusterDetail>(`/api/cluster/${clusterId}`);
+  return response.data;
+};
+
+export const updateCluster = async (
+  clusterId: number,
+  payload: { label?: string | null },
+): Promise<ClusterUpdateResponse> => {
+  const response = await api.patch<ClusterUpdateResponse>(
+    `/api/cluster/${clusterId}`,
+    payload,
+  );
   return response.data;
 };
 
@@ -338,12 +386,15 @@ export interface PersonItem {
   name: string | null;
   face_count: number;
   sample_media_ids: number[];
+  thumbnail_url?: string | null;
 }
 
 export interface PersonImage {
   media_id: number;
   filename: string;
+  thumbnail_url?: string | null;
   faces: {
+    id: number;
     bounding_box: { x1: number; y1: number; x2: number; y2: number };
     confidence: number;
   }[];
@@ -382,58 +433,185 @@ export const triggerFaceClustering = async () => {
   return response.data;
 };
 
-// ─── User Feedback API ──────────────────────────────────────────────────────
+// ─── Feedback API ────────────────────────────────────────────────────────────
 
-export interface FeedbackItem {
+export interface PersonFeedback {
   id: number;
-  feedback_type: "same_person" | "image_assignment";
-  source_id: number;
-  target_id: number | null;
-  media_id: number | null;
-  decision: "confirm" | "reject";
-  metadata_json: Record<string, unknown> | null;
+  feedback_type: string;
+  source_person_id: number;
+  target_person_id?: number | null;
+  face_ids: number[];
+  status: string;
   created_at: string;
-  is_active: boolean;
 }
 
-export const createFeedback = async (data: {
+export interface GeneralFeedback {
+  id: number;
   feedback_type: string;
-  source_id: number;
-  target_id?: number | null;
   media_id?: number | null;
-  decision: string;
-  metadata_json?: Record<string, unknown> | null;
-}): Promise<FeedbackItem> => {
-  const response = await api.post<FeedbackItem>("/api/feedback", data);
-  return response.data;
-};
+  person_id?: number | null;
+  rating?: number | null;
+  rating_reason?: string | null;
+  extra_metadata?: Record<string, unknown> | null;
+  created_at: string;
+}
 
-export const listFeedback = async (
-  params: {
-    feedback_type?: string;
-    source_id?: number;
-    media_id?: number;
-    is_active?: boolean;
-  } = {},
-): Promise<FeedbackItem[]> => {
-  const response = await api.get<FeedbackItem[]>("/api/feedback", { params });
-  return response.data;
-};
-
-export const revertFeedback = async (
-  feedbackId: number,
-): Promise<FeedbackItem> => {
-  const response = await api.post<FeedbackItem>(
-    `/api/feedback/${feedbackId}/revert`,
+export const submitPersonFeedbackSplit = async (
+  personId: number,
+  faceIds: number[],
+  reason?: string,
+): Promise<PersonFeedback> => {
+  const response = await api.post<PersonFeedback>(
+    `/api/people/${personId}/feedback/split`,
+    {
+      feedback_type: "split",
+      face_ids: faceIds,
+      user_reason: reason,
+    },
   );
   return response.data;
 };
 
-export const deleteFeedback = async (
-  feedbackId: number,
-): Promise<{ status: string; id: number }> => {
-  const response = await api.delete<{ status: string; id: number }>(
-    `/api/feedback/${feedbackId}`,
+export const submitPersonFeedbackMerge = async (
+  personId: number,
+  targetPersonId: number,
+  reason?: string,
+): Promise<PersonFeedback> => {
+  const response = await api.post<PersonFeedback>(
+    `/api/people/${personId}/feedback/merge/${targetPersonId}`,
+    {
+      feedback_type: "merge",
+      face_ids: [],
+      user_reason: reason,
+    },
   );
+  return response.data;
+};
+
+export const submitPersonFeedbackWrongPerson = async (
+  personId: number,
+  faceIds: number[],
+  reason?: string,
+): Promise<PersonFeedback> => {
+  const response = await api.post<PersonFeedback>(
+    `/api/people/${personId}/feedback/wrong-person`,
+    {
+      feedback_type: "wrong_person",
+      face_ids: faceIds,
+      user_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const submitPersonFeedbackCorrect = async (
+  personId: number,
+  faceIds?: number[],
+  reason?: string,
+): Promise<PersonFeedback> => {
+  const response = await api.post<PersonFeedback>(
+    `/api/people/${personId}/feedback/correct`,
+    {
+      feedback_type: "correct",
+      face_ids: faceIds || [],
+      user_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const submitSearchRating = async (
+  mediaId: number,
+  rating: number,
+  reason?: string,
+): Promise<GeneralFeedback> => {
+  const response = await api.post<GeneralFeedback>(
+    "/api/feedback/search-rating",
+    {
+      feedback_type: "search_rating",
+      media_id: mediaId,
+      rating,
+      rating_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const submitCaptionRating = async (
+  mediaId: number,
+  rating: number,
+  reason?: string,
+): Promise<GeneralFeedback> => {
+  const response = await api.post<GeneralFeedback>(
+    "/api/feedback/caption-rating",
+    {
+      feedback_type: "caption_rating",
+      media_id: mediaId,
+      rating,
+      rating_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const submitObjectRating = async (
+  mediaId: number,
+  rating: number,
+  reason?: string,
+): Promise<GeneralFeedback> => {
+  const response = await api.post<GeneralFeedback>(
+    "/api/feedback/object-rating",
+    {
+      feedback_type: "object_rating",
+      media_id: mediaId,
+      rating,
+      rating_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const submitCaptionCorrection = async (
+  mediaId: number,
+  correctedCaption: string,
+  reason?: string,
+): Promise<GeneralFeedback> => {
+  const response = await api.post<GeneralFeedback>(
+    "/api/feedback/caption-correction",
+    {
+      feedback_type: "caption_correction",
+      media_id: mediaId,
+      corrected_caption: correctedCaption,
+      rating_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const submitObjectCorrection = async (
+  mediaId: number,
+  correctedObjects: string[],
+  reason?: string,
+): Promise<GeneralFeedback> => {
+  const response = await api.post<GeneralFeedback>(
+    "/api/feedback/object-correction",
+    {
+      feedback_type: "object_correction",
+      media_id: mediaId,
+      corrected_objects: correctedObjects,
+      rating_reason: reason,
+    },
+  );
+  return response.data;
+};
+
+export const getFeedbackStats = async () => {
+  const response = await api.get("/api/feedback/stats");
+  return response.data;
+};
+
+export const getPersonFeedback = async (personId?: number) => {
+  const params = personId ? { person_id: personId } : {};
+  const response = await api.get("/api/people/feedback", { params });
   return response.data;
 };
