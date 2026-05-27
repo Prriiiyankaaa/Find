@@ -385,7 +385,7 @@ docker compose -f docker-compose.light.yml up --build
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/contribution-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/contribution-light.png">
-  <img alt="Contibution Workflow" src="docs/assets/contribution-dark.png">
+  <img alt="Contribution Workflow" src="docs/assets/contribution-dark.png">
 </picture>
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for full details.
