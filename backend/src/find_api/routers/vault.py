@@ -19,6 +19,7 @@ from slowapi.util import get_remote_address
 
 from find_api.core.crypto import (
     VAULT_STORAGE_DIR,
+    build_vault_aad,
     create_key_verifier,
     delete_session_key,
     decrypt_file_stream,
@@ -281,7 +282,13 @@ def hide_media(
     try:
         try:
             download_file_to_path(media.minio_key, temp_source_path)
-            iv = encrypt_file(master_key, temp_source_path, str(encrypted_path))
+            aad = build_vault_aad(media.id, media.file_hash)
+            iv = encrypt_file(
+                master_key,
+                temp_source_path,
+                str(encrypted_path),
+                associated_data=aad,
+            )
 
             db.execute(
                 text(
@@ -335,7 +342,13 @@ def stream_hidden_media(
     if not encrypted_file.exists():
         raise HTTPException(status_code=404, detail="Encrypted vault blob not found")
 
+    aad = build_vault_aad(media.id, media.file_hash)
     return StreamingResponse(
-        decrypt_file_stream(master_key, iv, str(encrypted_file)),
+        decrypt_file_stream(
+            master_key,
+            iv,
+            str(encrypted_file),
+            associated_data=aad,
+        ),
         media_type=media.content_type or "application/octet-stream",
     )
