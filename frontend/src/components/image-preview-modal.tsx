@@ -2,9 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Check,
   ChevronLeft,
   ChevronRight,
+  Check,
   Copy,
   Download,
   Heart,
@@ -219,6 +219,12 @@ export function ImagePreviewModal({
   const [likedOverride, setLikedOverride] = useState<boolean | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [ocrCopied, setOcrCopied] = useState(false);
+
+  useEffect(() => {
+    if (!ocrCopied) return;
+    const id = setTimeout(() => setOcrCopied(false), 2000);
+    return () => clearTimeout(id);
+  }, [ocrCopied]);
 
   const detailQuery = useQuery<MediaDetail, Error>({
     queryKey: ["image-detail", media.id],
@@ -656,13 +662,12 @@ export function ImagePreviewModal({
                             await navigator.clipboard.writeText(ocrText);
                             setOcrCopied(true);
                             toast.success("OCR text copied to clipboard");
-                            setTimeout(() => setOcrCopied(false), 2000);
                           } catch {
                             toast.error("Failed to copy OCR text");
                           }
                         }}
                         className="frost-button px-2 py-1 text-xs text-[color:var(--silver)]"
-                        aria-label="Copy OCR text to clipboard"
+                        aria-label={ocrCopied ? "OCR text copied to clipboard" : "Copy OCR text to clipboard"}
                       >
                         {ocrCopied ? (
                           <Check className="h-3 w-3 text-[color:var(--green)]" />
