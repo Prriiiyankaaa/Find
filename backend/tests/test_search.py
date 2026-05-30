@@ -174,3 +174,98 @@ class TestSearchResponseShape:
     def test_missing_query_returns_422(self, client):
         response = client.get("/api/search")
         assert response.status_code == 422
+
+
+class TestSearchDiagnostics:
+    """Tests for the debug diagnostics response behavior."""
+
+    def _mock_search_with_debug(self, client, fake_rows, debug: bool, environment: str):
+        """Call /api/search with debug param and a controlled environment."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed_text.return_value = [0.0] * 768
+
+        mock_db = MagicMock()
+        count_result = MagicMock()
+        count_result.scalar.return_value = len(fake_rows)
+        mock_db.execute.side_effect = [count_result, iter(fake_rows)]
+
+        def _override():
+            yield mock_db
+
+        app.dependency_overrides[get_db] = _override
+
+        try:
+            with (
+                patch(
+                    "find_api.routers.search.settings",
+                    ML_MODE="mock",
+                    EMBEDDING_DIM=768,
+                    ENVIRONMENT=environment,
+                ),
+                patch(
+                    "find_api.ml.mock_embedder.get_mock_embedder",
+                    return_value=mock_embedder,
+                ),
+            ):
+                return client.get(
+                    "/api/search", params={"q": "sunset", "debug": str(debug).lower()}
+                )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+
+    def test_diagnostics_present_when_debug_true_local(self, client):
+        """diagnostics block is returned when debug=True in local environment."""
+        response = self._mock_search_with_debug(
+            client, [], debug=True, environment="local"
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert "diagnostics" in body
+        diag = body["diagnostics"]
+        assert "embedding_ms" in diag
+        assert "retrieval_ms" in diag
+        assert "total_ms" in diag
+        assert "results_returned" in diag
+        assert "similarity_threshold" in diag
+        assert "ml_mode" in diag
+        assert isinstance(diag["embedding_ms"], float)
+        assert isinstance(diag["retrieval_ms"], float)
+        assert isinstance(diag["total_ms"], float)
+        assert isinstance(diag["results_returned"], int)
+
+    def test_diagnostics_present_when_debug_true_development(self, client):
+        """diagnostics block is returned when debug=True in development environment."""
+        response = self._mock_search_with_debug(
+            client, [], debug=True, environment="development"
+        )
+
+        assert response.status_code == 200
+        assert "diagnostics" in response.json()
+
+    def test_diagnostics_absent_when_debug_false(self, client):
+        """diagnostics block is NOT returned when debug=False."""
+        response = self._mock_search_with_debug(
+            client, [], debug=False, environment="local"
+        )
+
+        assert response.status_code == 200
+        assert "diagnostics" not in response.json()
+
+    def test_diagnostics_absent_in_production(self, client):
+        """diagnostics block is NOT returned in production even if debug=True."""
+        response = self._mock_search_with_debug(
+            client, [], debug=True, environment="production"
+        )
+
+        assert response.status_code == 200
+        assert "diagnostics" not in response.json()
+
+    def test_diagnostics_absent_in_staging(self, client):
+        """diagnostics block is NOT returned in staging even if debug=True."""
+        response = self._mock_search_with_debug(
+            client, [], debug=True, environment="staging"
+        )
+
+        assert response.status_code == 200
+        assert "diagnostics" not in response.json()
