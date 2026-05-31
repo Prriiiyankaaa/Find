@@ -417,6 +417,15 @@
     background-color: var(--surface-soft);
   }
 
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Keep light-mode image cards clear without changing the dark theme fade. */
   html.light .card-hover .bg-gradient-to-t,
   html[data-theme="light"] .card-hover .bg-gradient-to-t {

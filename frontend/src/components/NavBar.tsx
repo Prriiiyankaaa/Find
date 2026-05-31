@@ -89,7 +89,7 @@ export default function NavBar() {
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-2 overflow-visible rounded-full border border-[var(--frost)] bg-[color:var(--frost-soft)] p-1">
+    <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-[var(--frost)] bg-[color:var(--frost-soft)] p-1 sm:gap-2 sm:rounded-full">
       {navLinks.map(({ href, label }) => {
         const isActive = mounted && pathname === href;
 
@@ -134,7 +134,7 @@ export default function NavBar() {
         type="button"
         onClick={toggleTheme}
         aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-        className="ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--frost)] bg-[color:var(--frost-soft)] text-[color:var(--near-white)] transition hover:scale-105"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--frost)] bg-[color:var(--frost-soft)] text-[color:var(--near-white)] transition hover:scale-105 sm:ml-1"
       >
         {theme === "light" ? (
           <Moon size={18} strokeWidth={2.2} />
