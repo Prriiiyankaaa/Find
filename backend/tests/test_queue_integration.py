@@ -22,14 +22,8 @@ def _reset_backend():
     import find_api.core.queue as qm
 
     qm._BACKEND = None
-    qm._get_backend.queue = None
-    qm._get_backend.redis_conn = None
-    qm._get_backend.mode = "redis"
     yield
     qm._BACKEND = None
-    qm._get_backend.queue = None
-    qm._get_backend.redis_conn = None
-    qm._get_backend.mode = "redis"
 
 
 @pytest.fixture()
@@ -93,6 +87,10 @@ class TestSqliteIntegration:
         from find_api.core.queue import enqueue_clustering_job
 
         r1 = enqueue_clustering_job(reason="first")
+        assert r1["enqueued"] is True
+        r2 = enqueue_clustering_job(reason="second")
+        assert r2["enqueued"] is False
+        assert r2["job_id"] == r1["job_id"]
 
     def test_get_task_queue(self, sqlite_settings):
         from find_api.core.queue import get_task_queue

@@ -62,6 +62,7 @@ def _dispatch(job: SqliteJob, queue: SqliteQueue) -> None:
 
 def run_worker_once(queue: SqliteQueue) -> int:
     """Dequeue and execute a single job, returning 1 if a job was run else 0."""
+    _ensure_registrations()
     job = queue.dequeue()
     if job is None:
         return 0
@@ -110,16 +111,25 @@ def run_worker_loop(
         stop.wait(poll_interval)
 
 
+WORKER_SHUTDOWN_TIMEOUT = 5.0
+
+
 def start_worker_thread(
     queue: SqliteQueue | None = None,
     *,
     poll_interval: float = POLL_INTERVAL,
 ) -> threading.Thread:
-    """Start the worker loop in a daemon thread and return it."""
+    """Start the worker loop in a daemon thread and return it.
+
+    Validates the queue and registrations on the calling thread so
+    initialization failures surface immediately.
+    """
+    q = queue or SqliteQueue()
+    _ensure_registrations()
     stop_event = threading.Event()
     thread = threading.Thread(
         target=run_worker_loop,
-        args=(queue,),
+        args=(q,),
         kwargs={"poll_interval": poll_interval, "stop_event": stop_event},
         daemon=True,
         name="sqlite-worker",
@@ -132,10 +142,13 @@ def start_worker_thread(
 
 
 def stop_worker_thread(thread: threading.Thread) -> None:
-    """Signal the worker thread to stop."""
+    """Signal the worker thread to stop and wait for it to exit."""
     stop_event = getattr(thread, "_stop_event", None)
     if stop_event:
         stop_event.set()
+    thread.join(timeout=WORKER_SHUTDOWN_TIMEOUT)
+    if thread.is_alive():
+        logger.warning("SQLite worker thread did not stop within %ss", WORKER_SHUTDOWN_TIMEOUT)
 
 
 # Allow running as a standalone script::

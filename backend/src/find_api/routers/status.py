@@ -36,7 +36,7 @@ def get_loaded_models():
                     process_status[process_name] = status
             except Exception:
                 continue
-    except RuntimeError:
+    except Exception:
         pass
 
     loaded_models = sorted(
@@ -91,8 +91,8 @@ def get_job_status(job_id: str):
 
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Error fetching job {job_id}: {exc}") from exc
 
 
 def _attr_iso(obj: Any, attr: str) -> str | None:

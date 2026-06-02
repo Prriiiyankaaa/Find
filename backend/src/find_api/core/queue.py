@@ -67,16 +67,20 @@ def get_task_queue():
     return _get_backend()
 
 
+RQ_CONTROL_KWARGS = frozenset({"job_timeout", "result_ttl", "ttl", "failure_ttl", "depends_on"})
+
+
 def enqueue_job(func: Any, *args: Any, **kwargs: Any) -> Any:
     """Enqueue a job, returning a proxy with at least ``.id``.
 
     Accepts the same arguments as ``rq.Queue.enqueue``.  Extra kwargs
     (``job_timeout``, ``result_ttl``, …) are forwarded in Redis mode and
-    silently ignored in SQLite mode.
+    stripped in SQLite mode.
     """
     backend = _get_backend()
     if _get_backend.mode == "sqlite":
-        return backend.enqueue_call(func, *args, **kwargs)
+        sqlite_kwargs = {k: v for k, v in kwargs.items() if k not in RQ_CONTROL_KWARGS}
+        return backend.enqueue_call(func, *args, **sqlite_kwargs)
     else:
         return backend.enqueue(func, *args, **kwargs)
 
@@ -108,11 +112,13 @@ def _cluster_lock_ttl() -> int:
 
 
 def clear_clustering_job_state() -> None:
-    """Clear Redis keys used to coalesce clustering jobs."""
+    """Clear keys used to coalesce clustering jobs."""
     backend = _get_backend()
     if _get_backend.mode == "redis":
         _get_backend.redis_conn.delete(CLUSTERING_LOCK_KEY)
         _get_backend.redis_conn.delete(CLUSTERING_JOB_ID_KEY)
+    else:
+        backend.release_clustering_lock(CLUSTERING_LOCK_KEY)
 
 
 def _get_existing_clustering_job_id() -> str | None:
@@ -144,11 +150,7 @@ def _set_clustering_lock(*, reason: str) -> bool:
             )
         )
     else:
-        jobs = backend.list_active()
-        for j in jobs:
-            if "cluster_images" in j.type or "clustering" in j.type:
-                return False
-        return True
+        return backend.acquire_clustering_lock(CLUSTERING_LOCK_KEY, reason, _cluster_lock_ttl())
 
 
 def _save_clustering_job_id(job_id: str) -> None:

@@ -15,7 +15,7 @@ import time
 
 import pytest
 
-from find_api.core.sqlite_queue import SqliteQueue, SqliteJob, _resolve_job_type
+from find_api.core.sqlite_queue import SqliteQueue, _resolve_job_type
 
 
 # ---------------------------------------------------------------------------
@@ -97,12 +97,14 @@ class TestEnqueueDequeue:
 
     def test_dequeue_only_queued(self, queue: SqliteQueue):
         """Dequeue should only return jobs with status 'queued'."""
-        j1 = queue.enqueue("first")
-        queue.dequeue()  # claims j1
+        queue.enqueue("first")
+        d1 = queue.dequeue()  # claims first
         j3 = queue.enqueue("third")
         job = queue.dequeue()
         assert job is not None
         assert job.id == j3.id
+        assert d1 is not None
+        assert d1.id != j3.id
 
 
 # ---------------------------------------------------------------------------
@@ -186,10 +188,11 @@ class TestListCount:
 
     def test_count_by_status(self, queue: SqliteQueue):
         queue.enqueue("a")
-        j2 = queue.enqueue("b")
-        j3 = queue.enqueue("c")
+        queue.enqueue("b")
+        queue.enqueue("c")
         j1 = queue.dequeue()  # claim "a"
         queue.dequeue()  # claim "b"
+        assert j1 is not None
         queue.complete(j1.id)  # complete "a"
 
         counts = queue.count_by_status()

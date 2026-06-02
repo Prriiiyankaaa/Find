@@ -8,7 +8,7 @@ import sqlite3
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from find_api.core.config import settings
@@ -83,13 +83,35 @@ SELECT status, COUNT(*) as cnt FROM job_queue GROUP BY status
 """
 
 SQL_CLEAR_COMPLETED = """
-DELETE FROM job_queue WHERE status = 'completed' AND created_at < ?
+DELETE FROM job_queue WHERE status = 'completed' AND completed_at < ?
 """
 
 SQL_RESET_STALE = """
 UPDATE job_queue
 SET status = 'queued', started_at = NULL, error_info = ?
 WHERE status = 'running' AND started_at < ?
+"""
+
+SQL_CREATE_CLUSTERING_LOCKS = """
+CREATE TABLE IF NOT EXISTS clustering_locks (
+    key         TEXT PRIMARY KEY,
+    reason      TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+)
+"""
+
+SQL_ACQUIRE_CLUSTERING_LOCK = """
+INSERT INTO clustering_locks (key, reason, expires_at)
+VALUES (?, ?, ?)
+ON CONFLICT(key) DO NOTHING
+"""
+
+SQL_RELEASE_CLUSTERING_LOCK = """
+DELETE FROM clustering_locks WHERE key = ?
+"""
+
+SQL_CLEANUP_EXPIRED_LOCKS = """
+DELETE FROM clustering_locks WHERE expires_at < ?
 """
 
 
@@ -147,9 +169,10 @@ class SqliteQueue:
         return self._local.conn
 
     def _init_db(self) -> None:
-        """Create the job_queue table if it does not exist."""
+        """Create the job_queue and clustering_locks tables if they do not exist."""
         conn = self._conn()
         conn.execute(SQL_CREATE_TABLE)
+        conn.execute(SQL_CREATE_CLUSTERING_LOCKS)
         conn.commit()
 
     # ------------------------------------------------------------------
@@ -301,6 +324,25 @@ class SqliteQueue:
         )
         conn.commit()
 
+    def acquire_clustering_lock(self, key: str, reason: str, ttl_seconds: int) -> bool:
+        """Atomically acquire a clustering lock.
+
+        Returns True if this caller acquired the lock, False if another
+        caller already holds it.
+        """
+        conn = self._conn()
+        conn.execute(SQL_CLEANUP_EXPIRED_LOCKS, (_now_str(),))
+        expires_at = _now_str(ttl_seconds)
+        cursor = conn.execute(SQL_ACQUIRE_CLUSTERING_LOCK, (key, reason, expires_at))
+        conn.commit()
+        return cursor.rowcount > 0
+
+    def release_clustering_lock(self, key: str) -> None:
+        """Release a clustering lock."""
+        conn = self._conn()
+        conn.execute(SQL_RELEASE_CLUSTERING_LOCK, (key,))
+        conn.commit()
+
 
 # ------------------------------------------------------------------
 # Internal helpers
@@ -360,7 +402,7 @@ def _serialize_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def _now_str(offset_seconds: int = 0) -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
 
 
 def _parse_time(ts: str | None) -> datetime | None:

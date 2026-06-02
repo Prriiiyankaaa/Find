@@ -99,13 +99,10 @@ async def run_analysis_recovery_loop() -> None:
 def _get_job_status(job_id: str | None) -> str | None:
     if not job_id:
         return None
-    try:
-        job = get_job(job_id)
-        if job is None:
-            return None
-        return job.get_status()
-    except Exception:  # noqa: BLE001
+    job = get_job(job_id)
+    if job is None:
         return None
+    return job.get_status()
 
 
 def _mark_failed(media: Media, message: str) -> None:
