@@ -78,6 +78,7 @@ class GeneralFeedbackResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 # ─── Person Cluster Feedback Endpoints ────────────────────────────────────
 
 
