@@ -77,6 +77,7 @@ class Settings(BaseSettings):
         if value <= 0:
             raise ValueError(f"{info.field_name} must be greater than 0")
         return value
+
     @model_validator(mode="after")
     def validate_remote_ml_config(self):
         """Require remote ML settings when remote mode is enabled."""
