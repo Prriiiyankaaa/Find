@@ -175,9 +175,16 @@ class MinIOStorageBackend(StorageBackend):
                 )
 
             signing_client = self._public_client or self.client
-            return signing_client.presigned_get_object(
+            base_url = signing_client.presigned_get_object(
                 self.bucket, object_name, expires=timedelta(seconds=expires)
             )
+            if self._public_client and settings.MINIO_PUBLIC_ENDPOINT:
+                parsed = urlparse(settings.MINIO_PUBLIC_ENDPOINT.rstrip("/"))
+                base_path = parsed.path.rstrip("/")
+                if base_path:
+                    signed_parsed = urlparse(base_url)
+                    base_url = urlunparse((signed_parsed.scheme, signed_parsed.netloc, base_path + signed_parsed.path, signed_parsed.params, signed_parsed.query, signed_parsed.fragment))
+            return base_url
         except S3Error as e:
             logger.error(f"Failed to generate URL: {e}")
             raise StorageException(f"URL generation failed: {e}")
@@ -185,7 +192,7 @@ class MinIOStorageBackend(StorageBackend):
     async def delete_file(self, object_name: str) -> None:
         """Delete file from MinIO"""
         try:
-            self.client.remove_object(self.bucket, object_name)
+            await asyncio.to_thread(self.client.remove_object, self.bucket, object_name)
             logger.info(f"Deleted file from MinIO: {object_name}")
         except S3Error as e:
             logger.error(f"Failed to delete file from MinIO: {e}")
@@ -194,7 +201,7 @@ class MinIOStorageBackend(StorageBackend):
     async def file_exists(self, object_name: str) -> bool:
         """Check if file exists in MinIO"""
         try:
-            self.client.stat_object(self.bucket, object_name)
+            await asyncio.to_thread(self.client.stat_object, self.bucket, object_name)
             return True
         except S3Error as e:
             if e.code == "NoSuchKey":
