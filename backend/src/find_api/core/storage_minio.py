@@ -37,6 +37,7 @@ class MinIOStorageBackend(StorageBackend):
         )
         self.bucket = settings.MINIO_BUCKET
         self._public_client = self._get_public_client()
+        self._public_read_enabled = False
 
     def _get_public_client(self) -> Minio | None:
         """Get MinIO client for public endpoint if configured"""
@@ -89,9 +90,14 @@ class MinIOStorageBackend(StorageBackend):
                 ],
             }
             self.client.set_bucket_policy(self.bucket, json.dumps(policy))
+            self._public_read_enabled = True
             logger.info(f"Applied public read policy to bucket '{self.bucket}'")
         except S3Error as exc:
-            logger.warning(f"Failed to apply public read policy: {exc}")
+            self._public_read_enabled = False
+            logger.warning(
+                f"Failed to apply public read policy to bucket '{self.bucket}': {exc}. "
+                "Falling back to presigned URLs until the policy can be applied."
+            )
 
     def _remove_public_read_policy(self) -> None:
         """Remove public read policy from bucket"""
@@ -100,6 +106,8 @@ class MinIOStorageBackend(StorageBackend):
             logger.info(f"Removed public read policy from bucket '{self.bucket}'")
         except S3Error as exc:
             logger.warning(f"Failed to remove public read policy: {exc}")
+        finally:
+            self._public_read_enabled = False
 
     async def upload_file(
         self, file_data: bytes, object_name: str, content_type: str = "image/jpeg"
@@ -161,7 +169,7 @@ class MinIOStorageBackend(StorageBackend):
     async def get_file_url(self, object_name: str, expires: int = 3600) -> str:
         """Get presigned or public URL for file"""
         try:
-            if settings.MINIO_PUBLIC_READ and settings.MINIO_PUBLIC_ENDPOINT:
+            if self._public_read_enabled and settings.MINIO_PUBLIC_ENDPOINT:
                 parsed = urlparse(settings.MINIO_PUBLIC_ENDPOINT.rstrip("/"))
                 object_path = object_name.lstrip("/")
                 base_path = parsed.path.rstrip("/")
