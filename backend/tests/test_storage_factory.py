@@ -58,6 +58,7 @@ def test_create_storage_backend_is_case_insensitive():
 
         backend = storage_factory.create_storage_backend()
 
+    fake_cls.assert_called_once_with("/tmp/test_storage")
     assert backend is fake_instance
 
 
