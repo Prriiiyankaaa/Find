@@ -32,8 +32,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "binaries/find-backend"
-    ]
+    "externalBin": ["binaries/find-backend"]
   }
 }
+
