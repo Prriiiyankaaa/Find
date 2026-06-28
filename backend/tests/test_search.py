@@ -49,13 +49,26 @@ def _signature_result(token: str = "1:2026-01-01T00:00:00+00:00") -> MagicMock:
 
 def _mock_search(client, fake_rows, *, params=None, total_count=None, return_db=False):
     """Call /api/search with mocked embeddings and paginated DB responses."""
-    response, _mock_db = _mock_search_with_db(
-        client, fake_rows, params=params, total_count=total_count
+    response, mock_db = _mock_search_with_db(
+        client,
+        fake_rows,
+        params=params,
+        total_count=total_count,
+        return_db=return_db,
     )
+    if return_db:
+        return response, mock_db
     return response
 
 
-def _mock_search_with_db(client, fake_rows, *, params=None, total_count=None):
+def _mock_search_with_db(
+    client,
+    fake_rows,
+    *,
+    params=None,
+    total_count=None,
+    return_db=False,
+):
     """Call /api/search and return the mocked DB for SQL assertions."""
     mock_embedder = MagicMock()
     mock_embedder.embed_text.return_value = [0.0] * 768
@@ -87,9 +100,7 @@ def _mock_search_with_db(client, fake_rows, *, params=None, total_count=None):
             response = client.get(
                 "/api/search", params={"q": "sunset", **(params or {})}
             )
-            if return_db:
-                return response, mock_db
-            return response
+            return response, mock_db
     finally:
         app.dependency_overrides.pop(get_db, None)
 
