@@ -97,6 +97,19 @@ def parse_metadata_date(value: str | None, field_name: str) -> datetime | None:
     return parsed
 
 
+def _public_media_query(db: Session):
+    """Return media rows visible through public gallery/image routes."""
+    return db.query(Media).filter(Media.is_hidden.is_(False))
+
+
+def _load_public_media_or_404(db: Session, media_id: int) -> Media:
+    """Load a visible media row or raise 404."""
+    media = _public_media_query(db).filter(Media.id == media_id).first()
+    if not media:
+        raise HTTPException(404, "Image not found")
+    return media
+
+
 def apply_metadata_filters(
     query,
     *,
@@ -138,7 +151,18 @@ def apply_metadata_filters(
         query = query.filter(Media.width == Media.height)
     if file_type:
         normalized_type = file_type.lower().lstrip(".")
-        query = query.filter(Media.content_type.ilike(f"%{normalized_type}%"))
+        mime_type_map = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "webp": "image/webp",
+            "gif": "image/gif",
+            "bmp": "image/bmp",
+            "tif": "image/tiff",
+            "tiff": "image/tiff",
+        }
+        expected_content_type = mime_type_map.get(normalized_type, normalized_type)
+        query = query.filter(Media.content_type == expected_content_type)
     return query
 
 
