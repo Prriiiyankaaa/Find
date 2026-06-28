@@ -110,13 +110,17 @@ def apply_metadata_filters(
     orientation: OrientationFilter | None = None,
 ):
     """Apply shared metadata filters to a SQLAlchemy media query."""
+    camera_make = camera_make.strip() if camera_make else None
+    camera_model = camera_model.strip() if camera_model else None
+    file_type = file_type.strip() if file_type else None
+
     if camera_make:
         query = query.filter(
-            Media.exif_json["make"].as_string().ilike(f"%{camera_make.strip()}%")
+            Media.exif_json["make"].as_string().ilike(f"%{camera_make}%")
         )
     if camera_model:
         query = query.filter(
-            Media.exif_json["model"].as_string().ilike(f"%{camera_model.strip()}%")
+            Media.exif_json["model"].as_string().ilike(f"%{camera_model}%")
         )
     if date_from is not None:
         query = query.filter(Media.created_at >= date_from)
@@ -133,7 +137,7 @@ def apply_metadata_filters(
     elif orientation == "square":
         query = query.filter(Media.width == Media.height)
     if file_type:
-        normalized_type = file_type.strip().lower().lstrip(".")
+        normalized_type = file_type.lower().lstrip(".")
         query = query.filter(Media.content_type.ilike(f"%{normalized_type}%"))
     return query
 
