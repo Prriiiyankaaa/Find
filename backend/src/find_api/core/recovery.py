@@ -32,9 +32,7 @@ FAILED_JOB_STATUSES = {"failed", "stopped", "canceled"}
 RECOVERY_INTERVAL_SECONDS = 60
 
 
-def reconcile_abandoned_analysis_jobs(
-    db: Session, **kwargs: Any
-) -> int:
+def reconcile_abandoned_analysis_jobs(db: Session, **kwargs: Any) -> int:
     """Reconcile pending/processing media with their active jobs.
 
     Media rows keep the current analysis job id so healthy queued/started

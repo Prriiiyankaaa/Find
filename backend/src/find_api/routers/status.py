@@ -3,21 +3,26 @@ Status endpoint for checking job progress
 """
 
 import json
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from find_api.core.config import settings
+from find_api.core.dependencies import get_admin_user, get_required_user
 from find_api.core.model_manager import get_model_manager
 from find_api.core.queue import get_job, get_redis_connection
+from find_api.models.user import User
 
 router = APIRouter()
 
 
 @router.get("/status/models")
-def get_loaded_models():
+def get_loaded_models(_admin: Optional[User] = Depends(get_admin_user)):
     """
     Get currently loaded ML models across API/worker processes.
+
+    Exposes deployment internals, so this is admin-only in shared mode
+    (no-op restriction in local mode).
     """
     manager = get_model_manager()
     local_status = manager.get_status()
@@ -55,7 +60,10 @@ def get_loaded_models():
 
 
 @router.get("/status/{job_id}")
-def get_job_status(job_id: str):
+def get_job_status(
+    job_id: str,
+    _user: Optional[User] = Depends(get_required_user),
+):
     """
     Check status of a processing job
 
